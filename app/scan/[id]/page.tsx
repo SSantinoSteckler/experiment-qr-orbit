@@ -8,7 +8,7 @@ type Avatar = { img: string };
 function ScanParamContent() {
   const params = useParams();
   const idRaw = (params?.id ?? "") as string;
-  const id = 0;
+  const id = typeof idRaw === "string" ? idRaw.trim() : "";
 
   const totalActive = 46;
 
@@ -65,6 +65,7 @@ function ScanParamContent() {
 
       setMsg("✅ Listo");
       console.log("✅ Respuesta:", data);
+      setClicked(false);
     } catch (e) {
       console.error(e);
       setMsg("❌ Error de red / conexión");
