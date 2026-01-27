@@ -37,32 +37,31 @@ function ScanContent({ id }: { id: string }) {
 
   const extra = Math.max(0, totalActive - avatars.length);
 
-  async function track(event: "scan" | "click") {
-    // UA solo existe en cliente, ok acá
-    const ua =
-      typeof navigator !== "undefined" ? navigator.userAgent : undefined;
-
-    await fetch("/api/track", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        event,
-        qrId,
-        venue,
-        ts: Date.now(),
-        ua,
-      }),
-    });
-  }
-
   useEffect(() => {
-    track("scan");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qrId, venue]);
 
   const onClick = async () => {
+    console.log("🔵 Click detectado, id:", id);
     setClicked(true);
-    await track("click");
+
+    try {
+      const url = `https://experiment-satt.onrender.com/api/btn/${id}`;
+      console.log("🟡 GET request a:", url);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      console.log("🟡 Status:", response.status);
+      console.log("🟡 Ok:", response.ok);
+
+      const data = await response.json();
+      console.log("✅ Respuesta:", data);
+    } catch (error) {
+      console.error("❌ Error en GET:", error);
+    }
   };
 
   return (
