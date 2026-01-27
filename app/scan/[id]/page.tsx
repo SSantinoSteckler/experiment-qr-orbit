@@ -65,7 +65,6 @@ function ScanParamContent() {
 
       setMsg("✅ Listo");
       console.log("✅ Respuesta:", data);
-      setClicked(false);
     } catch (e) {
       console.error(e);
       setMsg("❌ Error de red / conexión");
@@ -81,11 +80,6 @@ function ScanParamContent() {
           <br />
           en este bar ahora
         </h1>
-
-        {/* Debug visible */}
-        <p className="mt-3 text-center text-xs text-white/50">
-          Debug: <span className="font-mono">/scan/{id || "(vacío)"}</span>
-        </p>
 
         <div className="mt-8 flex items-center justify-center">
           <div className="flex -space-x-4">
