@@ -1,21 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 
-type Avatar = {
-  img: string;
-};
+type Avatar = { img: string };
 
-function ScanContent({ id }: { id: string }) {
-  const [clicked, setClicked] = useState(false);
+function ScanParamContent() {
+  const params = useParams();
+  const idRaw = (params?.id ?? "") as string;
+  const id = 0;
 
-  const searchParams = useSearchParams();
-  const qrId = id;
-  const venue = searchParams.get("venue") ?? "unknown";
-
-  // Si querés, podés hacerlo dinámico por QR después
   const totalActive = 46;
+
+  const [clicked, setClicked] = useState(false);
+  const [msg, setMsg] = useState("");
 
   const avatars: Avatar[] = useMemo(
     () => [
@@ -37,30 +35,40 @@ function ScanContent({ id }: { id: string }) {
 
   const extra = Math.max(0, totalActive - avatars.length);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrId, venue]);
-
   const onClick = async () => {
     console.log("🔵 Click detectado, id:", id);
+
+    if (!id) {
+      setMsg("❌ ID inválido en la URL.");
+      return;
+    }
+
     setClicked(true);
+    setMsg("⏳ Enviando...");
 
     try {
-      const url = `https://experiment-satt.onrender.com/api/btn/${id}`;
-      console.log("🟡 GET request a:", url);
+      const res = await fetch(
+        `https://experiment-satt.onrender.com/api/btn/${encodeURIComponent(id)}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
 
-      const response = await fetch(url, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
+      const data = await res.json().catch(() => null);
 
-      console.log("🟡 Status:", response.status);
-      console.log("🟡 Ok:", response.ok);
+      if (!res.ok) {
+        setMsg(`❌ ${data?.error ?? `Error HTTP ${res.status}`}`);
+        setClicked(false);
+        return;
+      }
 
-      const data = await response.json();
+      setMsg("✅ Listo");
       console.log("✅ Respuesta:", data);
-    } catch (error) {
-      console.error("❌ Error en GET:", error);
+    } catch (e) {
+      console.error(e);
+      setMsg("❌ Error de red / conexión");
+      setClicked(false);
     }
   };
 
@@ -73,7 +81,11 @@ function ScanContent({ id }: { id: string }) {
           en este bar ahora
         </h1>
 
-        {/* Avatares solapados */}
+        {/* Debug visible */}
+        <p className="mt-3 text-center text-xs text-white/50">
+          Debug: <span className="font-mono">/scan/{id || "(vacío)"}</span>
+        </p>
+
         <div className="mt-8 flex items-center justify-center">
           <div className="flex -space-x-4">
             {avatars.map((a, i) => (
@@ -104,26 +116,32 @@ function ScanContent({ id }: { id: string }) {
 
         <button
           onClick={onClick}
-          disabled={clicked}
-          className="mt-6 w-full rounded-2xl py-4 text-lg font-bold bg-white text-neutral-950 disabled:opacity-60 cursor-pointer disabled:cursor-default hover:bg-white/90 transition"
+          disabled={clicked || !id}
+          className="mt-6 w-full rounded-2xl py-4 text-lg font-bold bg-white text-neutral-950 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-white/90 transition"
         >
           {clicked ? "Listo" : "Quiero verlos"}
         </button>
 
+        {msg && (
+          <p
+            className={`mt-4 text-center text-sm ${msg.startsWith("✅") ? "text-green-300" : "text-red-300"}`}
+          >
+            {msg}
+          </p>
+        )}
+
         <p className="mt-4 text-center text-xs text-white/50">
           Experimento universitario. No se guarda información personal.
         </p>
-
-        {/* Debug opcional (sacalo en prod) */}
       </div>
     </main>
   );
 }
 
-export default function Scan({ params }: { params: { id: string } }) {
+export default function ScanParamPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-neutral-950" />}>
-      <ScanContent id={params.id} />
+      <ScanParamContent />
     </Suspense>
   );
 }
