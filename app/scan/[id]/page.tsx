@@ -7,11 +7,11 @@ type Avatar = {
   img: string;
 };
 
-function LandingContent() {
+function ScanContent({ id }: { id: string }) {
   const [clicked, setClicked] = useState(false);
 
   const searchParams = useSearchParams();
-  const qrId = searchParams.get("qr") ?? "default";
+  const qrId = id;
   const venue = searchParams.get("venue") ?? "unknown";
 
   // Si querés, podés hacerlo dinámico por QR después
@@ -121,10 +121,10 @@ function LandingContent() {
   );
 }
 
-export default function Landing() {
+export default function Scan({ params }: { params: { id: string } }) {
   return (
     <Suspense fallback={<div className="min-h-screen bg-neutral-950" />}>
-      <LandingContent />
+      <ScanContent id={params.id} />
     </Suspense>
   );
 }
