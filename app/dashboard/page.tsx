@@ -42,13 +42,33 @@ export default function DashboardPage() {
   const [qrId, setQrId] = useState("");
 
   const parseClicks = (data: BtnStats | unknown) => {
-    const d = (data || {}) as BtnStats;
-    const type1 = typeof d.type1 === "number" ? d.type1 : 0;
-    const type2 = typeof d.type2 === "number" ? d.type2 : 0;
-    if (typeof d.total === "number") {
-      return { total: d.total, type1, type2 };
-    }
-    return { total: type1 + type2, type1, type2 };
+    const d = (data || {}) as Record<string, unknown>;
+    // Support multiple possible shapes returned by the backend:
+    // { total, type1, type2 } OR { 1, 2 } OR { type_1, type_2 } etc.
+    const type1 =
+      typeof d.type1 === "number"
+        ? d.type1
+        : typeof d["1"] === "number"
+          ? d["1"]
+          : typeof d.type_1 === "number"
+            ? d.type_1
+            : 0;
+    const type2 =
+      typeof d.type2 === "number"
+        ? d.type2
+        : typeof d["2"] === "number"
+          ? d["2"]
+          : typeof d.type_2 === "number"
+            ? d.type_2
+            : 0;
+    const total = typeof d.total === "number" ? d.total : type1 + type2;
+    return { total, type1, type2 };
+  };
+
+  const formatPct = (value: number | null | undefined) => {
+    if (value == null) return "0%";
+    if (value > 0 && value < 0.05) return "<0.1%";
+    return `${value.toFixed(1)}%`;
   };
 
   // Fetch estadísticas globales
@@ -198,11 +218,11 @@ export default function DashboardPage() {
                 <div className="text-xs opacity-90 mt-3">
                   <div>
                     Type1: {totalClicksType1 ?? 0} (
-                    {globalPercentageType1?.toFixed(1) ?? "0"}%)
+                    {formatPct(globalPercentageType1)})
                   </div>
                   <div>
                     Type2: {totalClicksType2 ?? 0} (
-                    {globalPercentageType2?.toFixed(1) ?? "0"}%)
+                    {formatPct(globalPercentageType2)})
                   </div>
                 </div>
               </div>
@@ -290,7 +310,7 @@ export default function DashboardPage() {
                             {stats.clicksType1}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {stats.percentageType1.toFixed(1)}%
+                            {formatPct(stats.percentageType1)}
                           </div>
                         </div>
                         <div className="bg-white/20 rounded p-2">
@@ -299,7 +319,7 @@ export default function DashboardPage() {
                             {stats.clicksType2}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {stats.percentageType2.toFixed(1)}%
+                            {formatPct(stats.percentageType2)}
                           </div>
                         </div>
                       </div>
