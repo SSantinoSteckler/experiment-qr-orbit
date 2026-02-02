@@ -6,9 +6,19 @@ interface Stats {
   total?: number;
 }
 
+interface DetailedQRStats {
+  scans: number;
+  clicks: number;
+  percentage: number;
+}
+
 export default function DashboardPage() {
   const [totalScans, setTotalScans] = useState<number | null>(null);
-  const [qrStats, setQrStats] = useState<{ [key: number]: number }>({});
+  const [totalClicks, setTotalClicks] = useState<number | null>(null);
+  const [globalPercentage, setGlobalPercentage] = useState<number | null>(null);
+  const [qrStats, setQrStats] = useState<{ [key: number]: DetailedQRStats }>(
+    {},
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [qrId, setQrId] = useState("");
@@ -18,18 +28,31 @@ export default function DashboardPage() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/stats");
+        const [scansRes, clicksRes] = await Promise.all([
+          fetch("/api/stats"),
+          fetch("/api/btn-stats"),
+        ]);
 
-        if (!response.ok) {
+        if (!scansRes.ok || !clicksRes.ok) {
           throw new Error("Error fetching stats");
         }
 
-        const data: Stats = await response.json();
-        setTotalScans(data.total || 0);
+        const scansData: Stats = await scansRes.json();
+        const clicksData: Stats = await clicksRes.json();
+
+        const scans = scansData.total || 0;
+        const clicks = clicksData.total || 0;
+        const percentage = scans > 0 ? (clicks / scans) * 100 : 0;
+
+        setTotalScans(scans);
+        setTotalClicks(clicks);
+        setGlobalPercentage(percentage);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error desconocido");
         setTotalScans(null);
+        setTotalClicks(null);
+        setGlobalPercentage(null);
       } finally {
         setLoading(false);
       }
@@ -51,16 +74,25 @@ export default function DashboardPage() {
     }
 
     try {
-      const response = await fetch(`/api/stats/${qrId}`);
+      const [scansRes, clicksRes] = await Promise.all([
+        fetch(`/api/stats/${qrId}`),
+        fetch(`/api/btn-stats/${qrId}`),
+      ]);
 
-      if (!response.ok) {
+      if (!scansRes.ok || !clicksRes.ok) {
         throw new Error("QR no encontrado");
       }
 
-      const data: Stats = await response.json();
+      const scansData: Stats = await scansRes.json();
+      const clicksData: Stats = await clicksRes.json();
+
+      const scans = scansData.total || 0;
+      const clicks = clicksData.total || 0;
+      const percentage = scans > 0 ? (clicks / scans) * 100 : 0;
+
       setQrStats({
         ...qrStats,
-        [Number(qrId)]: data.total || 0,
+        [Number(qrId)]: { scans, clicks, percentage },
       });
       setError(null);
       setQrId("");
@@ -93,7 +125,7 @@ export default function DashboardPage() {
               {error}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
                 <div className="text-sm font-medium opacity-90">
                   Escaneos Totales
@@ -101,8 +133,18 @@ export default function DashboardPage() {
                 <div className="text-4xl font-bold mt-2">{totalScans}</div>
               </div>
               <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
-                <div className="text-sm font-medium opacity-90">Estado</div>
-                <div className="text-2xl font-bold mt-2">✓ Activo</div>
+                <div className="text-sm font-medium opacity-90">
+                  Clicks Totales
+                </div>
+                <div className="text-4xl font-bold mt-2">{totalClicks}</div>
+              </div>
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+                <div className="text-sm font-medium opacity-90">
+                  Tasa de Conversión
+                </div>
+                <div className="text-4xl font-bold mt-2">
+                  {globalPercentage?.toFixed(1)}%
+                </div>
               </div>
               <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
                 <div className="text-sm font-medium opacity-90">
@@ -151,18 +193,36 @@ export default function DashboardPage() {
                 Resultados
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(qrStats).map(([id, count]) => (
+                {Object.entries(qrStats).map(([id, stats]) => (
                   <div
                     key={id}
-                    className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4"
+                    className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-6"
                   >
-                    <div className="text-sm text-gray-600 mb-2">
+                    <div className="text-sm font-semibold text-gray-700 mb-4">
                       QR ID: {id}
                     </div>
-                    <div className="text-3xl font-bold text-indigo-600">
-                      {count}
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Escaneos:</span>
+                        <span className="text-2xl font-bold text-indigo-600">
+                          {stats.scans}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Clicks:</span>
+                        <span className="text-2xl font-bold text-green-600">
+                          {stats.clicks}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center bg-white rounded p-2">
+                        <span className="text-sm text-gray-600">
+                          Conversión:
+                        </span>
+                        <span className="text-2xl font-bold text-orange-600">
+                          {stats.percentage.toFixed(1)}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 mt-2">escaneos</div>
                   </div>
                 ))}
               </div>
