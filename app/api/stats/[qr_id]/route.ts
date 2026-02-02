@@ -1,9 +1,10 @@
 export async function GET(
   request: Request,
-  { params }: { params: { qr_id: string } },
+  { params }: { params: Promise<{ qr_id: string }> },
 ) {
   try {
-    const qrId = params.qr_id;
+    const { qr_id } = await params;
+    const qrId = qr_id;
     const API_BASE =
       process.env.NEXT_PUBLIC_API_BASE ||
       "https://experiment-satt.onrender.com/api";
