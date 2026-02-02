@@ -9,19 +9,47 @@ interface Stats {
 interface DetailedQRStats {
   scans: number;
   clicks: number;
+  clicksType1: number;
+  clicksType2: number;
   percentage: number;
+  percentageType1: number;
+  percentageType2: number;
+}
+
+interface BtnStats {
+  total?: number;
+  type1?: number;
+  type2?: number;
 }
 
 export default function DashboardPage() {
   const [totalScans, setTotalScans] = useState<number | null>(null);
   const [totalClicks, setTotalClicks] = useState<number | null>(null);
+  const [totalClicksType1, setTotalClicksType1] = useState<number | null>(null);
+  const [totalClicksType2, setTotalClicksType2] = useState<number | null>(null);
   const [globalPercentage, setGlobalPercentage] = useState<number | null>(null);
+  const [globalPercentageType1, setGlobalPercentageType1] = useState<
+    number | null
+  >(null);
+  const [globalPercentageType2, setGlobalPercentageType2] = useState<
+    number | null
+  >(null);
   const [qrStats, setQrStats] = useState<{ [key: number]: DetailedQRStats }>(
     {},
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [qrId, setQrId] = useState("");
+
+  const parseClicks = (data: BtnStats | unknown) => {
+    const d = (data || {}) as BtnStats;
+    const type1 = typeof d.type1 === "number" ? d.type1 : 0;
+    const type2 = typeof d.type2 === "number" ? d.type2 : 0;
+    if (typeof d.total === "number") {
+      return { total: d.total, type1, type2 };
+    }
+    return { total: type1 + type2, type1, type2 };
+  };
 
   // Fetch estadísticas globales
   useEffect(() => {
@@ -38,21 +66,36 @@ export default function DashboardPage() {
         }
 
         const scansData: Stats = await scansRes.json();
-        const clicksData: Stats = await clicksRes.json();
+        const clicksData: BtnStats = await clicksRes.json();
 
         const scans = scansData.total || 0;
-        const clicks = clicksData.total || 0;
+        const {
+          total: clicks,
+          type1: clicksType1,
+          type2: clicksType2,
+        } = parseClicks(clicksData);
+
         const percentage = scans > 0 ? (clicks / scans) * 100 : 0;
+        const percentageType1 = scans > 0 ? (clicksType1 / scans) * 100 : 0;
+        const percentageType2 = scans > 0 ? (clicksType2 / scans) * 100 : 0;
 
         setTotalScans(scans);
         setTotalClicks(clicks);
+        setTotalClicksType1(clicksType1);
+        setTotalClicksType2(clicksType2);
         setGlobalPercentage(percentage);
+        setGlobalPercentageType1(percentageType1);
+        setGlobalPercentageType2(percentageType2);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error desconocido");
         setTotalScans(null);
         setTotalClicks(null);
         setGlobalPercentage(null);
+        setTotalClicksType1(null);
+        setTotalClicksType2(null);
+        setGlobalPercentageType1(null);
+        setGlobalPercentageType2(null);
       } finally {
         setLoading(false);
       }
@@ -84,15 +127,30 @@ export default function DashboardPage() {
       }
 
       const scansData: Stats = await scansRes.json();
-      const clicksData: Stats = await clicksRes.json();
+      const clicksData: BtnStats = await clicksRes.json();
 
       const scans = scansData.total || 0;
-      const clicks = clicksData.total || 0;
+      const {
+        total: clicks,
+        type1: clicksType1,
+        type2: clicksType2,
+      } = parseClicks(clicksData);
+
       const percentage = scans > 0 ? (clicks / scans) * 100 : 0;
+      const percentageType1 = scans > 0 ? (clicksType1 / scans) * 100 : 0;
+      const percentageType2 = scans > 0 ? (clicksType2 / scans) * 100 : 0;
 
       setQrStats({
         ...qrStats,
-        [Number(qrId)]: { scans, clicks, percentage },
+        [Number(qrId)]: {
+          scans,
+          clicks,
+          clicksType1,
+          clicksType2,
+          percentage,
+          percentageType1,
+          percentageType2,
+        },
       });
       setError(null);
       setQrId("");
@@ -137,6 +195,16 @@ export default function DashboardPage() {
                   Clicks Totales
                 </div>
                 <div className="text-4xl font-bold mt-2">{totalClicks}</div>
+                <div className="text-xs opacity-90 mt-3">
+                  <div>
+                    Type1: {totalClicksType1 ?? 0} (
+                    {globalPercentageType1?.toFixed(1) ?? "0"}%)
+                  </div>
+                  <div>
+                    Type2: {totalClicksType2 ?? 0} (
+                    {globalPercentageType2?.toFixed(1) ?? "0"}%)
+                  </div>
+                </div>
               </div>
               <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
                 <div className="text-sm font-medium opacity-90">
@@ -214,7 +282,29 @@ export default function DashboardPage() {
                           {stats.clicks}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center bg-white rounded p-2">
+
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="bg-white/20 rounded p-2">
+                          <div className="text-xs text-gray-600">Type1</div>
+                          <div className="text-lg font-bold text-indigo-600">
+                            {stats.clicksType1}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {stats.percentageType1.toFixed(1)}%
+                          </div>
+                        </div>
+                        <div className="bg-white/20 rounded p-2">
+                          <div className="text-xs text-gray-600">Type2</div>
+                          <div className="text-lg font-bold text-indigo-600">
+                            {stats.clicksType2}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {stats.percentageType2.toFixed(1)}%
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center bg-white rounded p-2 mt-3">
                         <span className="text-sm text-gray-600">
                           Conversión:
                         </span>
