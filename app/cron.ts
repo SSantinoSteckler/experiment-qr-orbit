@@ -9,7 +9,9 @@ export function initializeCron() {
   cronJob = cron.schedule("0 * * * *", async () => {
     try {
       console.log("[CRON] Ejecutando ping a la API...");
-      const response = await fetch("https://experiment-satt.onrender.com/ping");
+      const response = await fetch(
+        "https://experiment-satt.onrender.com/api/ping",
+      );
 
       if (response.ok) {
         console.log("[CRON] Ping exitoso");

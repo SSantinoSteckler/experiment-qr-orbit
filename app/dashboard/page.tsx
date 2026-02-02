@@ -1,0 +1,180 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface Stats {
+  total?: number;
+}
+
+export default function DashboardPage() {
+  const [totalScans, setTotalScans] = useState<number | null>(null);
+  const [qrStats, setQrStats] = useState<{ [key: number]: number }>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [qrId, setQrId] = useState("");
+
+  // Fetch estadísticas globales
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch("/api/stats");
+
+        if (!response.ok) {
+          throw new Error("Error fetching stats");
+        }
+
+        const data: Stats = await response.json();
+        setTotalScans(data.total || 0);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error desconocido");
+        setTotalScans(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+    // Refrescar cada 30 segundos
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch estadísticas de un QR específico
+  const handleSearchQr = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!qrId.trim()) {
+      setError("Por favor ingresa un ID de QR");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/stats/${qrId}`);
+
+      if (!response.ok) {
+        throw new Error("QR no encontrado");
+      }
+
+      const data: Stats = await response.json();
+      setQrStats({
+        ...qrStats,
+        [Number(qrId)]: data.total || 0,
+      });
+      setError(null);
+      setQrId("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al buscar QR");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Encabezado */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Dashboard</h1>
+          <p className="text-gray-600">Monitorea estadísticas de escaneos QR</p>
+        </div>
+
+        {/* Tarjeta de estadísticas globales */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            Estadísticas Globales
+          </h2>
+
+          {loading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="text-lg text-gray-500">Cargando...</div>
+            </div>
+          ) : error && totalScans === null ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+              {error}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+                <div className="text-sm font-medium opacity-90">
+                  Escaneos Totales
+                </div>
+                <div className="text-4xl font-bold mt-2">{totalScans}</div>
+              </div>
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
+                <div className="text-sm font-medium opacity-90">Estado</div>
+                <div className="text-2xl font-bold mt-2">✓ Activo</div>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+                <div className="text-sm font-medium opacity-90">
+                  Última Actualización
+                </div>
+                <div className="text-lg font-bold mt-2">
+                  {new Date().toLocaleTimeString()}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Búsqueda de QR específico */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            Buscar QR Específico
+          </h2>
+
+          <form onSubmit={handleSearchQr} className="flex gap-4 mb-6">
+            <input
+              type="number"
+              value={qrId}
+              onChange={(e) => setQrId(e.target.value)}
+              placeholder="Ingresa el ID del QR"
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              Buscar
+            </button>
+          </form>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 mb-6">
+              {error}
+            </div>
+          )}
+
+          {/* Resultados de búsqueda */}
+          {Object.keys(qrStats).length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-700">
+                Resultados
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(qrStats).map(([id, count]) => (
+                  <div
+                    key={id}
+                    className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4"
+                  >
+                    <div className="text-sm text-gray-600 mb-2">
+                      QR ID: {id}
+                    </div>
+                    <div className="text-3xl font-bold text-indigo-600">
+                      {count}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2">escaneos</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-gray-600 text-sm">
+          <p>Los datos se actualizan automáticamente cada 30 segundos</p>
+        </div>
+      </div>
+    </div>
+  );
+}
