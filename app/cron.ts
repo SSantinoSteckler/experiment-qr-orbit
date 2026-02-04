@@ -6,7 +6,7 @@ export function initializeCron() {
   if (cronJob) return; // Evitar inicializar múltiples veces
 
   // Ejecutar cada hora (0 * * * *)
-  cronJob = cron.schedule("0 * * * *", async () => {
+  cronJob = cron.schedule("*/5 * * * *", async () => {
     try {
       console.log("[CRON] Ejecutando ping a la API...");
       const response = await fetch(
@@ -23,7 +23,7 @@ export function initializeCron() {
     }
   });
 
-  console.log("[CRON] Cron job inicializado - se ejecutará cada hora");
+  console.log("[CRON] Cron job inicializado - se ejecutará cada 5 minutos");
 }
 
 export function stopCron() {
