@@ -1,35 +1,26 @@
-import cron, { ScheduledTask } from "node-cron";
+"use client";
 
-let cronJob: ScheduledTask | null = null;
+import { useEffect } from "react";
 
-export function initializeCron() {
-  if (cronJob) return; // Evitar inicializar múltiples veces
-
-  // Ejecutar cada hora (0 * * * *)
-  cronJob = cron.schedule("*/5 * * * *", async () => {
-    try {
-      console.log("[CRON] Ejecutando ping a la API...");
-      const response = await fetch(
-        "https://experiment-satt.onrender.com/api/ping",
-      );
-
-      if (response.ok) {
-        console.log("[CRON] Ping exitoso");
-      } else {
-        console.error("[CRON] Error en ping:", response.status);
+export function useFrontendCron() {
+  useEffect(() => {
+    const ping = async () => {
+      try {
+        console.log("[FRONT CRON] Ping API");
+        await fetch("https://experiment-satt.onrender.com/api/ping", {
+          cache: "no-store",
+        });
+      } catch (e) {
+        console.error("[FRONT CRON] Error", e);
       }
-    } catch (error) {
-      console.error("[CRON] Error al hacer ping:", error);
-    }
-  });
+    };
 
-  console.log("[CRON] Cron job inicializado - se ejecutará cada 5 minutos");
-}
+    // Ejecuta al cargar la page
+    ping();
 
-export function stopCron() {
-  if (cronJob) {
-    cronJob.stop();
-    cronJob = null;
-    console.log("[CRON] Cron job detenido");
-  }
+    // Cada 5 minutos
+    const interval = setInterval(ping, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 }

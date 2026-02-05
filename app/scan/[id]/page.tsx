@@ -2,10 +2,12 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { useFrontendCron } from "@/app/cron";
 
 type Avatar = { img: string };
 
 function ScanParamContent() {
+  useFrontendCron();
   const params = useParams();
   const idRaw = (params?.id ?? "") as string;
   const id = typeof idRaw === "string" ? idRaw.trim() : "";
