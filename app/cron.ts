@@ -7,7 +7,7 @@ export function useFrontendCron() {
     const ping = async () => {
       try {
         console.log("[FRONT CRON] Ping API");
-        await fetch("api/ping", {
+        await fetch("/ping", {
           cache: "no-store",
         });
       } catch (e) {
